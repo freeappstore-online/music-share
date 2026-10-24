@@ -1,0 +1,13 @@
+{
+  "name": "music-share",
+  "private": true,
+  "packageManager": "pnpm@10.30.3",
+  "engines": { "node": ">=22" },
+  "pnpm": { "onlyBuiltDependencies": ["esbuild"] },
+  "scripts": {
+    "dev": "pnpm --filter @music-share/web dev",
+    "build": "pnpm --filter @music-share/web build",
+    "preview": "pnpm --filter @music-share/web preview",
+    "typecheck": "pnpm --filter @music-share/web exec tsc -b"
+  }
+}
