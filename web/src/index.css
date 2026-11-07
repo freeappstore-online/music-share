@@ -10,7 +10,7 @@
   --muted: #666666;
   --line: rgba(0, 0, 0, 0.08);
   --line-strong: rgba(0, 0, 0, 0.14);
-  --panel: rgba(255, 255, 255, 0.72);
+  --panel: #ffffff;
   --panel-strong: rgba(255, 255, 255, 0.88);
   --panel-quiet: rgba(255, 255, 255, 0.6);
   --accent: #d86f4d;
@@ -50,7 +50,7 @@
   --muted: #888888;
   --line: rgba(255, 255, 255, 0.08);
   --line-strong: rgba(255, 255, 255, 0.14);
-  --panel: rgba(18, 18, 18, 0.8);
+  --panel: #121212;
   --panel-strong: rgba(18, 18, 18, 0.92);
   --panel-quiet: rgba(22, 22, 22, 0.8);
   --accent: #ff9b76;
@@ -89,8 +89,6 @@ html {
 
 body {
   min-height: 100dvh;
-  -webkit-user-select: none;
-  user-select: none;
   background:
     radial-gradient(circle at top left, var(--bg-blob-1), transparent 32%),
     radial-gradient(circle at top right, var(--bg-blob-2), transparent 30%),
@@ -164,6 +162,13 @@ a {
     opacity 160ms ease;
 }
 
+button,
+nav,
+label {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 button:active {
   transform: scale(0.985);
 }
@@ -185,6 +190,8 @@ a:focus-visible {
 
 } /* end @layer base */
 
-/* Shell's text-size preference scales rem-based app typography. */
-:root[data-text='lg'] { font-size: 112.5%; }
-:root[data-text='sm'] { font-size: 87.5%; }
+@layer base {
+  /* Shell's text-size preference scales rem-based app typography. */
+  :root[data-text='lg'] { font-size: 112.5%; }
+  :root[data-text='sm'] { font-size: 87.5%; }
+}

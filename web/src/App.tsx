@@ -1,98 +1,100 @@
 import { useEffect, useState } from 'react'
-import { initApp } from '@freeappstore/sdk'
-import { useAuth } from '@freeappstore/sdk/hooks'
-import { type NavItem, PageHeader, ProfilePage, Shell, useToast } from '@freeappstore/sdk/ui'
+import { type NavItem, ProfilePage, Shell } from '@freeappstore/sdk/ui'
+import { fas } from './fas'
+import {
+  addToPlaylist,
+  addTrack,
+  createPlaylist,
+  deletePlaylist,
+  loadLibrary,
+  removeFromPlaylist,
+  removeTrack,
+  renamePlaylist,
+  saveLibrary,
+  setShareId,
+  updateTrack,
+} from './library'
+import type { Library } from './types'
+import { LibraryPage } from './components/LibraryPage'
+import { ListenPage } from './components/ListenPage'
+import { PlaylistsPage } from './components/PlaylistsPage'
+import { RecordPage } from './components/RecordPage'
+import { PageHeader } from '@freeappstore/sdk/ui'
 
-const fas = initApp({ appId: 'music-share' })
-
-// The app's screens. Shell renders them as its navbar (<nav aria-label="Main">,
-// current screen highlighted, a menu on phones). Add one entry per screen;
-// `title` becomes the browser tab title on that route.
 const NAV: NavItem[] = [
-  { label: 'Home', href: '/', title: 'music-share' },
+  { label: 'Record', href: '/', title: 'Record — music-share' },
+  { label: 'Library', href: '/library', title: 'Library — music-share' },
+  { label: 'Playlists', href: '/playlists', title: 'Playlists — music-share' },
   { label: 'Account', href: '/account', title: 'Account — music-share' },
 ]
 
 export default function App() {
   const [path, setPath] = useState(() => window.location.pathname)
+  const [lib, setLib] = useState<Library>(loadLibrary)
 
-  // Keep the screen in step with the browser's back and forward buttons.
   useEffect(() => {
     const sync = () => setPath(window.location.pathname)
     window.addEventListener('popstate', sync)
     return () => window.removeEventListener('popstate', sync)
   }, [])
 
-  // Nav clicks switch screens without a page load. Shell scrolls to the top
-  // and moves focus to the new screen's PageHeader.
+  useEffect(() => saveLibrary(lib), [lib])
+
   const navigate = (href: string) => {
     window.history.pushState(null, '', href)
     setPath(href)
   }
+  const change = (fn: (l: Library) => Library) => setLib(fn)
 
-  // requireAuth: this app works with the signed-in user's data, so the Shell
-  // shows a sign-in screen until the visitor signs in (one account for every
-  // FreeAppStore app). The topbar's profile menu handles sign-out.
-  return (
-    <Shell app={fas} appName="music-share" nav={NAV} onNavigate={navigate} requireAuth>
-      <div className="mx-auto w-full max-w-3xl p-4 sm:p-8">
-        {path === '/account' ? <Account /> : <Home />}
-      </div>
-    </Shell>
-  )
-}
+  const listenId = path.match(/^\/listen\/([^/]+)$/)?.[1]
+  const playlistId = path.match(/^\/playlists\/([^/]+)$/)?.[1] ?? null
 
-function Home() {
-  const { user } = useAuth(fas)
-  const toast = useToast()
-  const [note, setNote] = useState('')
-
-  // Per-user cloud storage: follows the user across devices.
-  useEffect(() => {
-    fas.kv.get<string>('note').then((saved) => setNote(saved ?? ''))
-  }, [])
-
-  const save = async () => {
-    try {
-      await fas.kv.set('note', note)
-      toast.show('Saved', { variant: 'success' })
-    } catch {
-      toast.show('Could not save', { variant: 'error' })
-    }
+  let screen: React.ReactNode
+  if (listenId) {
+    screen = <ListenPage shareId={decodeURIComponent(listenId)} goTo={navigate} />
+  } else if (path === '/account') {
+    screen = (
+      <>
+        <PageHeader title="Account" />
+        <ProfilePage app={fas} />
+      </>
+    )
+  } else if (path === '/library') {
+    screen = (
+      <LibraryPage
+        lib={lib}
+        onAdd={(t) => change((l) => addTrack(l, t))}
+        onEdit={(id, patch) => change((l) => updateTrack(l, id, patch))}
+        onRemove={(id) => change((l) => removeTrack(l, id))}
+        onAddToPlaylist={(pid, tid) => change((l) => addToPlaylist(l, pid, tid))}
+      />
+    )
+  } else if (path === '/playlists' || playlistId) {
+    screen = (
+      <PlaylistsPage
+        lib={lib}
+        playlistId={playlistId}
+        goTo={navigate}
+        change={change}
+        onCreate={(id, name) => change((l) => createPlaylist(l, id, name))}
+        onRename={(id, name) => change((l) => renamePlaylist(l, id, name))}
+        onDelete={(id) => change((l) => deletePlaylist(l, id))}
+        onShareId={(id, shareId) => change((l) => setShareId(l, id, shareId))}
+        onRemoveTrack={(pid, tid) => change((l) => removeFromPlaylist(l, pid, tid))}
+      />
+    )
+  } else {
+    screen = <RecordPage tracks={lib.tracks} onAdd={(t) => change((l) => addTrack(l, t))} goTo={navigate} />
   }
 
   return (
-    <>
-      <PageHeader title="music-share" description={`Signed in as ${user?.login ?? ''}. Edit web/src/App.tsx to start building.`} />
-      <label className="block text-sm font-semibold text-[var(--ink)]" htmlFor="note">
-        Your note (saved to your account)
-      </label>
-      <textarea
-        id="note"
-        className="mt-2 w-full rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-[var(--ink)]"
-        rows={4}
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-      />
-      <button
-        type="button"
-        className="mt-3 rounded-xl bg-[var(--accent)] px-4 py-2 font-semibold text-white"
-        onClick={save}
-      >
-        Save
-      </button>
-      <p className="mt-8 text-sm text-[var(--muted)]">
-        music-share is a free app on <a href="https://freeappstore.online" className="underline">FreeAppStore</a>.
-      </p>
-    </>
-  )
-}
-
-function Account() {
-  return (
-    <>
-      <PageHeader title="Account" />
-      <ProfilePage app={fas} />
-    </>
+    <Shell app={fas} appName="music-share" nav={NAV} onNavigate={navigate}>
+      <div className="mx-auto w-full max-w-3xl p-4 sm:p-8">
+        {screen}
+        <p className="mt-10 text-sm text-[var(--muted)]">
+          music-share is a free app on <a href="https://freeappstore.online" className="underline">FreeAppStore</a>.
+        </p>
+      </div>
+    </Shell>
   )
 }
